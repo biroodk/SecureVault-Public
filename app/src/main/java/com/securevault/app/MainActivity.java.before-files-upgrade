@@ -1,0 +1,2516 @@
+package com.securevault.app;
+
+import android.app.Activity;
+import android.os.Bundle;
+import android.os.Build;
+import android.content.SharedPreferences;
+import android.content.Intent;
+import android.net.Uri;
+import android.provider.DocumentsContract;
+import android.graphics.Color;
+import android.graphics.Typeface;
+import android.graphics.Outline;
+import android.text.InputType;
+import android.view.Gravity;
+import android.view.View;
+import android.view.ViewOutlineProvider;
+import android.view.animation.AlphaAnimation;
+import android.view.animation.Animation;
+import android.view.animation.DecelerateInterpolator;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.ScrollView;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.SecureRandom;
+import java.util.concurrent.Executor;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Locale;
+
+public class MainActivity extends Activity {
+
+    private static final String PREFS = "folder_locker_security";
+    private static final String KEY_SALT = "password_salt";
+    private static final String KEY_HASH = "password_hash";
+    private static final String KEY_FINGERPRINT = "fingerprint_enabled";
+
+    private SharedPreferences prefs;
+    private EditText passwordInput;
+    private EditText confirmInput;
+    private TextView message;
+
+    private int dp(float value) {
+        return (int) (value * getResources().getDisplayMetrics().density + 0.5f);
+    }
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+
+        showWelcomeScreen();
+    }
+
+    private TextView text(
+            String value,
+            float size,
+            int color,
+            boolean bold
+    ) {
+        TextView view = new TextView(this);
+        view.setText(value);
+        view.setTextSize(size);
+        view.setTextColor(color);
+        view.setGravity(Gravity.CENTER);
+
+        if (bold) {
+            view.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        }
+
+        return view;
+    }
+
+    private LinearLayout root() {
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setGravity(Gravity.CENTER_HORIZONTAL);
+        root.setPadding(dp(24), dp(28), dp(24), dp(24));
+        root.setBackgroundResource(com.securevault.app.R.drawable.bg_neon);
+        return root;
+    }
+
+    private void fadeIn(View view, long duration, long delay) {
+        AlphaAnimation animation = new AlphaAnimation(0f, 1f);
+        animation.setDuration(duration);
+        animation.setStartOffset(delay);
+        animation.setInterpolator(new DecelerateInterpolator());
+        view.startAnimation(animation);
+    }
+
+    private ImageView createLogo(int size) {
+        ImageView image = new ImageView(this);
+        image.setImageResource(R.drawable.folder_locker_icon);
+        image.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+
+        LinearLayout.LayoutParams params =
+                new LinearLayout.LayoutParams(dp(size), dp(size));
+
+        params.setMargins(0, dp(18), 0, dp(14));
+        image.setLayoutParams(params);
+
+        return image;
+    }
+
+    private void showWelcomeScreen() {
+
+        LinearLayout root = root();
+
+        final int[] step = {0};
+
+        ImageView logo = createLogo(130);
+        root.addView(logo);
+
+        TextView title = text(
+                "Welcome to Folder Locker",
+                28,
+                Color.WHITE,
+                true
+        );
+
+        root.addView(title);
+
+        TextView designer = text(
+                "Designed by AHMED K SanShania",
+                16,
+                Color.rgb(100, 220, 230),
+                true
+        );
+
+        designer.setPadding(0, dp(10), 0, dp(4));
+        root.addView(designer);
+
+        TextView messageText = text(
+                "Your privacy. Your control.",
+                18,
+                Color.rgb(220, 230, 245),
+                true
+        );
+
+        messageText.setPadding(0, dp(24), 0, dp(8));
+        root.addView(messageText);
+
+        TextView detail = text(
+                "A private space for the files that matter to you.",
+                13,
+                Color.rgb(145, 160, 180),
+                false
+        );
+
+        detail.setPadding(0, dp(4), 0, dp(18));
+        root.addView(detail);
+
+        LinearLayout spacer = new LinearLayout(this);
+        root.addView(
+                spacer,
+                new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        0,
+                        1
+                )
+        );
+
+        Button next = button("Continue  →");
+
+        LinearLayout.LayoutParams nextParams =
+                new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        dp(54)
+                );
+
+        nextParams.setMargins(0, dp(10), 0, dp(8));
+        root.addView(next, nextParams);
+
+        TextView progress = text(
+                "1 / 5",
+                12,
+                Color.rgb(120, 135, 155),
+                false
+        );
+
+        progress.setPadding(0, dp(2), 0, dp(4));
+        root.addView(progress);
+
+        setContentView(root);
+
+        logo.setAlpha(0f);
+        title.setAlpha(0f);
+        designer.setAlpha(0f);
+        messageText.setAlpha(0f);
+        detail.setAlpha(0f);
+        next.setAlpha(0f);
+        progress.setAlpha(0f);
+
+        logo.animate()
+                .alpha(1f)
+                .scaleX(1.08f)
+                .scaleY(1.08f)
+                .setDuration(900)
+                .withEndAction(() ->
+                        logo.animate()
+                                .scaleX(1f)
+                                .scaleY(1f)
+                                .setDuration(350)
+                                .start()
+                )
+                .start();
+
+        title.animate()
+                .alpha(1f)
+                .setStartDelay(350)
+                .setDuration(700)
+                .start();
+
+        designer.animate()
+                .alpha(1f)
+                .setStartDelay(650)
+                .setDuration(700)
+                .start();
+
+        messageText.animate()
+                .alpha(1f)
+                .setStartDelay(900)
+                .setDuration(700)
+                .start();
+
+        detail.animate()
+                .alpha(1f)
+                .setStartDelay(1100)
+                .setDuration(700)
+                .start();
+
+        next.animate()
+                .alpha(1f)
+                .setStartDelay(1350)
+                .setDuration(700)
+                .start();
+
+        progress.animate()
+                .alpha(1f)
+                .setStartDelay(1350)
+                .setDuration(700)
+                .start();
+
+        next.setOnClickListener(v -> {
+
+            step[0]++;
+
+            if (step[0] == 1) {
+
+                messageText.setText(
+                        "Your files. Protected."
+                );
+
+                detail.setText(
+                        "Keep photos, videos, documents and other personal files inside your private vault."
+                );
+
+                progress.setText("2 / 5");
+
+            } else if (step[0] == 2) {
+
+                logo.setImageResource(
+                        R.drawable.biroodk
+                );
+
+                messageText.setText(
+                        "Designed with security in mind."
+                );
+
+                detail.setText(
+                        "Folder Locker gives your private files a protected space on your device."
+                );
+
+                progress.setText("3 / 5");
+
+            } else if (step[0] == 3) {
+
+                logo.setImageResource(
+                        R.drawable.folder_locker_icon
+                );
+
+                messageText.setText(
+                        "Your private space is ready."
+                );
+
+                detail.setText(
+                        "Create your security password and take control of your vault."
+                );
+
+                progress.setText("4 / 5");
+
+            } else if (step[0] == 4) {
+
+                messageText.setText(
+                        "Ready to enter?"
+                );
+
+                detail.setText(
+                        "Tap below to continue to your secure Folder Locker."
+                );
+
+                progress.setText("5 / 5");
+
+                next.setText(
+                        "Enter Folder Locker  →"
+                );
+
+            } else {
+
+                if (hasPassword()) {
+                    showUnlockScreen();
+                } else {
+                    showCreatePasswordScreen();
+                }
+            }
+
+            messageText.setAlpha(0f);
+            detail.setAlpha(0f);
+            logo.setAlpha(0f);
+
+            messageText.animate()
+                    .alpha(1f)
+                    .setDuration(450)
+                    .start();
+
+            detail.animate()
+                    .alpha(1f)
+                    .setStartDelay(120)
+                    .setDuration(450)
+                    .start();
+
+            logo.animate()
+                    .alpha(1f)
+                    .scaleX(1.08f)
+                    .scaleY(1.08f)
+                    .setDuration(500)
+                    .withEndAction(() ->
+                            logo.animate()
+                                    .scaleX(1f)
+                                    .scaleY(1f)
+                                    .setDuration(250)
+                                    .start()
+                    )
+                    .start();
+        });
+    }
+
+    private boolean hasPassword() {
+        return prefs.contains(KEY_HASH) && prefs.contains(KEY_SALT);
+    }
+
+    private EditText passwordField(String hint) {
+
+        EditText field = new EditText(this);
+
+        field.setHint(hint);
+        field.setHintTextColor(Color.rgb(125, 140, 165));
+        field.setTextColor(Color.WHITE);
+        field.setTextSize(16);
+        field.setSingleLine(true);
+
+        field.setPadding(
+                dp(16),
+                0,
+                dp(16),
+                0
+        );
+
+        field.setBackgroundResource(
+                R.drawable.bg_card
+        );
+
+        field.setInputType(
+                InputType.TYPE_CLASS_TEXT |
+                InputType.TYPE_TEXT_VARIATION_PASSWORD
+        );
+
+        LinearLayout.LayoutParams params =
+                new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        dp(56)
+                );
+
+        params.setMargins(
+                0,
+                dp(6),
+                0,
+                dp(6)
+        );
+
+        field.setLayoutParams(params);
+
+        return field;
+    }
+
+    private Button button(String value) {
+
+        Button button = new Button(this);
+
+        button.setText(value);
+        button.setTextSize(15);
+        button.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        button.setTextColor(Color.WHITE);
+        button.setAllCaps(false);
+        button.setBackgroundColor(Color.rgb(0, 170, 195));
+
+        LinearLayout.LayoutParams params =
+                new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        dp(54)
+                );
+
+        params.setMargins(
+                0,
+                dp(7),
+                0,
+                dp(7)
+        );
+
+        button.setLayoutParams(params);
+
+        return button;
+    }
+
+    private void showCreatePasswordScreen() {
+
+        LinearLayout root = root();
+
+        root.addView(createLogo(100));
+
+        TextView title = text(
+                "Create Your Vault",
+                25,
+                Color.WHITE,
+                true
+        );
+
+        root.addView(title);
+
+        TextView subtitle = text(
+                "Create a password to protect your private files.",
+                15,
+                Color.rgb(170, 180, 200),
+                false
+        );
+
+        subtitle.setPadding(0, dp(8), 0, dp(18));
+        root.addView(subtitle);
+
+        passwordInput =
+                passwordField("Create vault password");
+
+        confirmInput =
+                passwordField("Confirm vault password");
+
+        root.addView(passwordInput);
+        root.addView(confirmInput);
+
+        Button create =
+                button("🔐 Create Secure Vault");
+
+        root.addView(create);
+
+        message = text(
+                "",
+                14,
+                Color.rgb(255, 110, 130),
+                false
+        );
+
+        message.setPadding(0, dp(12), 0, 0);
+        root.addView(message);
+
+        create.setOnClickListener(v -> createPassword());
+
+        setContentView(root);
+
+        fadeIn(root, 500, 0);
+    }
+
+    private void createPassword() {
+
+        String password =
+                passwordInput.getText().toString();
+
+        String confirm =
+                confirmInput.getText().toString();
+
+        if (password.length() < 6) {
+            message.setText(
+                    "Password must contain at least 6 characters."
+            );
+            return;
+        }
+
+        if (!password.equals(confirm)) {
+            message.setText(
+                    "Passwords do not match."
+            );
+            return;
+        }
+
+        try {
+
+            byte[] salt = new byte[16];
+
+            new SecureRandom().nextBytes(salt);
+
+            String hash =
+                    hashPassword(password, salt);
+
+            prefs.edit()
+                    .putString(
+                            KEY_SALT,
+                            bytesToHex(salt)
+                    )
+                    .putString(
+                            KEY_HASH,
+                            hash
+                    )
+                    .putBoolean(
+                            KEY_FINGERPRINT,
+                            false
+                    )
+                    .apply();
+
+            Toast.makeText(
+                    this,
+                    "Vault password created.",
+                    Toast.LENGTH_SHORT
+            ).show();
+
+            showUnlockScreen();
+
+        } catch (Exception e) {
+
+            message.setText(
+                    "Unable to create the vault password."
+            );
+        }
+    }
+
+    private void showUnlockScreen() {
+
+        LinearLayout root = root();
+
+        root.addView(createLogo(105));
+
+        TextView title = text(
+                "Vault Locked",
+                27,
+                Color.rgb(100, 220, 230),
+                true
+        );
+
+        root.addView(title);
+
+        TextView subtitle = text(
+                "Authenticate to access your private files.",
+                16,
+                Color.rgb(180, 190, 205),
+                false
+        );
+
+        subtitle.setPadding(
+                0,
+                dp(8),
+                0,
+                dp(22)
+        );
+
+        root.addView(subtitle);
+
+        passwordInput =
+                passwordField("Enter vault password");
+
+        root.addView(passwordInput);
+
+        Button unlock =
+                button("🔓 Unlock Vault");
+
+        root.addView(unlock);
+
+        Button fingerprint =
+                button("👆 Use Fingerprint");
+
+        root.addView(fingerprint);
+
+        message = text(
+                "",
+                14,
+                Color.rgb(255, 110, 130),
+                false
+        );
+message.setPadding(
+                0,
+                dp(10),
+                0,
+                0
+        );
+
+        root.addView(message);
+
+        unlock.setOnClickListener(
+                v -> unlockWithPassword()
+        );
+
+        fingerprint.setOnClickListener(
+                v -> authenticateFingerprint()
+        );
+
+        setContentView(root);
+
+        fadeIn(root, 500, 0);
+    }
+
+    private void unlockWithPassword() {
+
+        String password =
+                passwordInput.getText().toString();
+
+        if (password.length() == 0) {
+            message.setText(
+                    "Enter your vault password."
+            );
+            return;
+        }
+
+        try {
+
+            String savedSalt =
+                    prefs.getString(KEY_SALT, "");
+
+            String savedHash =
+                    prefs.getString(KEY_HASH, "");
+
+            byte[] salt =
+                    hexToBytes(savedSalt);
+
+            String enteredHash =
+                    hashPassword(password, salt);
+
+            if (constantTimeEquals(
+                    savedHash,
+                    enteredHash
+            )) {
+
+                currentUnlockPassword = password;
+
+                openVault();
+
+            } else {
+
+                message.setText(
+                        "Incorrect password."
+                );
+            }
+
+        } catch (Exception e) {
+
+            message.setText(
+                    "Unable to verify password."
+            );
+        }
+    }
+
+    private void openVault() {
+
+        Toast.makeText(
+                this,
+                "Vault unlocked.",
+                Toast.LENGTH_SHORT
+        ).show();
+
+        showHome();
+    }
+
+    private static final int PICK_FILES = 1001;
+
+    private void openFilePicker() {
+
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("*/*");
+        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+
+        startActivityForResult(intent, PICK_FILES);
+    }
+
+    @Override
+    protected void onActivityResult(
+            int requestCode,
+            int resultCode,
+            Intent data
+    ) {
+        super.onActivityResult(
+                requestCode,
+                resultCode,
+                data
+        );
+
+        if (requestCode != PICK_FILES ||
+                resultCode != RESULT_OK ||
+                data == null) {
+            return;
+        }
+
+        String password =
+                getCurrentUnlockPassword();
+
+        if (password == null) {
+            Toast.makeText(
+                    this,
+                    "Vault session expired. Unlock again.",
+                    Toast.LENGTH_LONG
+            ).show();
+
+            showUnlockScreen();
+            return;
+        }
+
+        java.util.ArrayList<Uri> selectedUris =
+                new java.util.ArrayList<>();
+
+        if (data.getClipData() != null) {
+
+            int count =
+                    data.getClipData().getItemCount();
+
+            for (int i = 0; i < count; i++) {
+
+                Uri uri =
+                        data.getClipData()
+                                .getItemAt(i)
+                                .getUri();
+
+                selectedUris.add(uri);
+            }
+
+        } else if (data.getData() != null) {
+
+            selectedUris.add(
+                    data.getData()
+            );
+        }
+
+        if (selectedUris.isEmpty()) {
+            return;
+        }
+
+        processSelectedFiles(
+                selectedUris,
+                password
+        );
+    }
+
+    private String currentUnlockPassword;
+
+    private String getCurrentUnlockPassword() {
+        return currentUnlockPassword;
+    }
+
+    private boolean deleteOriginalDocument(Uri uri) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                return DocumentsContract.deleteDocument(
+                        getContentResolver(),
+                        uri
+                );
+            }
+        } catch (Exception ignored) {
+        }
+
+        return false;
+    }
+
+    private void processSelectedFiles(
+            java.util.ArrayList<Uri> uris,
+            String password
+    ) {
+
+        Toast.makeText(
+                this,
+                "Securing selected file(s)...",
+                Toast.LENGTH_SHORT
+        ).show();
+
+        final byte[] key;
+
+        try {
+            key = deriveVaultKey(password);
+        } catch (Exception e) {
+
+            Toast.makeText(
+                    this,
+                    "Could not create vault encryption key.",
+                    Toast.LENGTH_LONG
+            ).show();
+
+            return;
+        }
+
+        final java.util.concurrent.ExecutorService executor =
+                java.util.concurrent.Executors
+                        .newSingleThreadExecutor();
+
+        executor.execute(() -> {
+
+            int successCount = 0;
+            int originalDeleteFailedCount = 0;
+            int failedCount = 0;
+
+            for (Uri uri : uris) {
+
+                try {
+
+                    String fileName =
+                            getDisplayName(uri);
+
+                    if (fileName == null ||
+                            fileName.trim().isEmpty()) {
+
+                        fileName =
+                                "file_" +
+                                System.currentTimeMillis();
+                    }
+
+                    String safeName =
+                            createVaultFileName(
+                                    fileName
+                            );
+
+                    VaultCrypto.encryptUri(
+                            MainActivity.this,
+                            uri,
+                            key,
+                            safeName
+                    );
+
+                    String mimeType =
+                            getContentResolver()
+                                    .getType(uri);
+
+                    VaultItem item =
+                            new VaultItem(
+                                    java.util.UUID
+                                            .randomUUID()
+                                            .toString(),
+                                    fileName,
+                                    safeName + ".vault",
+                                    mimeType != null
+                                            ? mimeType
+                                            : "application/octet-stream",
+                                    System.currentTimeMillis()
+                            );
+
+                    VaultIndex.add(
+                            MainActivity.this,
+                            item
+                    );
+
+                    if (deleteOriginalDocument(uri)) {
+                        successCount++;
+                    } else {
+                        originalDeleteFailedCount++;
+                    }
+
+                } catch (Exception e) {
+
+                    failedCount++;
+                }
+            }
+
+            int finalSuccessCount =
+                    successCount;
+
+            int finalOriginalDeleteFailedCount =
+                    originalDeleteFailedCount;
+
+            int finalFailedCount =
+                    failedCount;
+
+            runOnUiThread(() -> {
+
+                executor.shutdown();
+
+                String resultMessage;
+
+                if (finalFailedCount == 0 &&
+                        finalOriginalDeleteFailedCount == 0) {
+
+                    resultMessage =
+                            finalSuccessCount +
+                            " file(s) encrypted, stored securely, " +
+                            "and original(s) removed.";
+
+                } else if (finalOriginalDeleteFailedCount > 0 &&
+                        finalFailedCount == 0) {
+
+                    resultMessage =
+                            finalSuccessCount +
+                            " secured. " +
+                            finalOriginalDeleteFailedCount +
+                            " encrypted, but the original file(s) " +
+                            "could not be removed.";
+
+                } else {
+
+                    resultMessage =
+                            finalSuccessCount +
+                            " secured, " +
+                            finalOriginalDeleteFailedCount +
+                            " original(s) could not be removed, " +
+                            finalFailedCount +
+                            " failed.";
+                }
+
+                Toast.makeText(
+                        this,
+                        resultMessage,
+                        Toast.LENGTH_LONG
+                ).show();
+            });
+        });
+    }
+
+    private String getDisplayName(Uri uri) {
+
+        android.database.Cursor cursor = null;
+
+        try {
+
+            cursor =
+                    getContentResolver()
+                            .query(
+                                    uri,
+                                    new String[]{
+                                            android.provider.OpenableColumns.DISPLAY_NAME
+                                    },
+                                    null,
+                                    null,
+                                    null
+                            );
+
+            if (cursor != null &&
+                    cursor.moveToFirst()) {
+
+                int index =
+                        cursor.getColumnIndex(
+                                android.provider.OpenableColumns
+                                        .DISPLAY_NAME
+                        );
+
+                if (index >= 0) {
+                    return cursor.getString(index);
+                }
+            }
+
+        } finally {
+
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+
+        return null;
+    }
+
+    private String createVaultFileName(
+            String originalName
+    ) {
+
+        String safe =
+                originalName.replaceAll(
+                        "[^a-zA-Z0-9._-]",
+                        "_"
+                );
+
+        return System.currentTimeMillis() +
+                "_" +
+                safe;
+    }
+
+    private void showHome() {
+
+        LinearLayout root = root();
+
+        LinearLayout page = new LinearLayout(this);
+        page.setOrientation(LinearLayout.VERTICAL);
+        page.setPadding(dp(14), dp(8), dp(14), dp(4));
+
+        /* HEADER */
+        LinearLayout header = new LinearLayout(this);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+
+        ImageView profile = new ImageView(this);
+        profile.setImageResource(R.drawable.biroodk);
+        profile.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        profile.setBackgroundResource(R.drawable.bg_profile_circle);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            profile.setClipToOutline(true);
+            profile.setOutlineProvider(new ViewOutlineProvider() {
+                @Override
+                public void getOutline(View view, Outline outline) {
+                    outline.setOval(0, 0, view.getWidth(), view.getHeight());
+                }
+            });
+        }
+
+        header.addView(
+                profile,
+                new LinearLayout.LayoutParams(dp(48), dp(48))
+        );
+
+        LinearLayout titleBox = new LinearLayout(this);
+        titleBox.setOrientation(LinearLayout.VERTICAL);
+        titleBox.setPadding(dp(12), 0, 0, 0);
+
+        TextView appTitle = text(
+                "Folder Locker",
+                20,
+                Color.WHITE,
+                true
+        );
+        appTitle.setGravity(Gravity.START);
+
+        TextView subtitle = text(
+                "Your Private Vault",
+                12,
+                Color.rgb(154, 167, 189),
+                false
+        );
+        subtitle.setGravity(Gravity.START);
+
+        titleBox.addView(appTitle);
+        titleBox.addView(subtitle);
+
+        header.addView(
+                titleBox,
+                new LinearLayout.LayoutParams(
+                        0,
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        1
+                )
+        );
+
+        TextView settings = text(
+                "⚙",
+                28,
+                Color.rgb(0, 217, 255),
+                false
+        );
+        settings.setOnClickListener(v -> showSettings());
+
+        header.addView(
+                settings,
+                new LinearLayout.LayoutParams(
+                        dp(48),
+                        dp(48)
+                )
+        );
+
+        page.addView(header);
+
+        /* VAULT STATUS */
+        LinearLayout statusCard = new LinearLayout(this);
+        statusCard.setOrientation(LinearLayout.VERTICAL);
+        statusCard.setPadding(dp(18), dp(16), dp(18), dp(16));
+        statusCard.setBackgroundResource(R.drawable.bg_card);
+
+        TextView statusTitle = text(
+                "🔐  Vault Secured",
+                17,
+                Color.rgb(53, 230, 154),
+                true
+        );
+        statusTitle.setGravity(Gravity.START);
+
+        TextView statusText = text(
+                "Your private files are protected",
+                12,
+                Color.rgb(154, 167, 189),
+                false
+        );
+        statusText.setGravity(Gravity.START);
+        statusText.setPadding(0, dp(5), 0, 0);
+
+        statusCard.addView(statusTitle);
+        statusCard.addView(statusText);
+
+        LinearLayout.LayoutParams statusParams =
+                new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                );
+        statusParams.setMargins(0, dp(18), 0, dp(18));
+
+        page.addView(statusCard, statusParams);
+
+        /* VAULT TITLE */
+        TextView vaultTitle = text(
+                "Your Vault",
+                20,
+                Color.WHITE,
+                true
+        );
+        vaultTitle.setGravity(Gravity.START);
+
+        page.addView(
+                vaultTitle,
+                new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+        );
+
+        TextView vaultSubtitle = text(
+                "Keep your personal files private and organized",
+                12,
+                Color.rgb(154, 167, 189),
+                false
+        );
+        vaultSubtitle.setGravity(Gravity.START);
+        vaultSubtitle.setPadding(0, dp(4), 0, dp(14));
+
+        page.addView(vaultSubtitle);
+
+        /* CATEGORY ROW 1 */
+        LinearLayout row1 = new LinearLayout(this);
+        row1.setOrientation(LinearLayout.HORIZONTAL);
+
+        row1.addView(
+                categoryCard("🖼", "Photos", "Private pictures"),
+                new LinearLayout.LayoutParams(
+                        0,
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        1
+                )
+        );
+
+        row1.addView(
+                categoryCard("🎬", "Videos", "Private videos"),
+                new LinearLayout.LayoutParams(
+                        0,
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        1
+                )
+        );
+
+        page.addView(row1);
+
+        /* CATEGORY ROW 2 */
+        LinearLayout row2 = new LinearLayout(this);
+        row2.setOrientation(LinearLayout.HORIZONTAL);
+
+        row2.addView(
+                categoryCard("📄", "Documents", "PDF, DOCX and more"),
+                new LinearLayout.LayoutParams(
+                        0,
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        1
+                )
+        );
+
+        row2.addView(
+                categoryCard("🎵", "Music", "Private audio"),
+                new LinearLayout.LayoutParams(
+                        0,
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        1
+                )
+        );
+
+        page.addView(row2);
+
+        /* CATEGORY ROW 3 */
+        LinearLayout row3 = new LinearLayout(this);
+        row3.setOrientation(LinearLayout.HORIZONTAL);
+
+        row3.addView(
+                categoryCard("📦", "Other Files", "Private files"),
+                new LinearLayout.LayoutParams(
+                        0,
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        1
+                )
+        );
+
+        row3.addView(
+                categoryCard("🔒", "Secure Folder", "Protected folders"),
+                new LinearLayout.LayoutParams(
+                        0,
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        1
+                )
+        );
+
+        page.addView(row3);
+
+        /* OPEN FILES BUTTON */
+        Button filesButton = new Button(this);
+        filesButton.setText("＋  Add Files & Folders");
+        filesButton.setTextColor(Color.WHITE);
+        filesButton.setTextSize(14);
+        filesButton.setAllCaps(false);
+        filesButton.setBackgroundResource(R.drawable.bg_card);
+
+        filesButton.setOnClickListener(
+                v -> openFilePicker()
+        );
+
+        LinearLayout.LayoutParams filesParams =
+                new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        dp(52)
+                );
+        filesParams.setMargins(0, dp(18), 0, dp(12));
+
+        page.addView(filesButton, filesParams);
+
+    
+
+    /* GLOW HOCKEY GAME */
+    FrameLayout gameButton = new FrameLayout(this);
+
+    LinearLayout gameContent = new LinearLayout(this);
+    gameContent.setOrientation(LinearLayout.VERTICAL);
+    gameContent.setGravity(Gravity.CENTER);
+    gameContent.setPadding(dp(12), dp(8), dp(12), dp(8));
+    gameContent.setBackgroundResource(R.drawable.bg_card);
+
+    TextView gameTitle = text(
+            "✨  GLOW HOCKEY",
+            17,
+            Color.WHITE,
+            true
+    );
+    gameTitle.setGravity(Gravity.CENTER);
+
+    TextView gameSubtitle = text(
+            "Play • Challenge • Have Fun",
+            11,
+            Color.rgb(0, 217, 255),
+            false
+    );
+    gameSubtitle.setGravity(Gravity.CENTER);
+    gameSubtitle.setPadding(0, dp(3), 0, 0);
+
+    gameContent.addView(gameTitle);
+    gameContent.addView(gameSubtitle);
+
+    gameButton.addView(
+            gameContent,
+            new FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
+            )
+    );
+
+    TextView shimmer = text(
+            "━━━━━━━━",
+            18,
+            Color.argb(110, 255, 255, 255),
+            true
+    );
+    shimmer.setGravity(Gravity.CENTER_VERTICAL);
+
+    FrameLayout.LayoutParams shimmerParams =
+            new FrameLayout.LayoutParams(
+                    dp(70),
+                    FrameLayout.LayoutParams.MATCH_PARENT
+            );
+
+    shimmerParams.gravity = Gravity.CENTER_VERTICAL | Gravity.LEFT;
+
+    gameButton.addView(shimmer, shimmerParams);
+
+    gameButton.setOnClickListener(
+            v -> openGlowHockeyGame()
+    );
+
+    LinearLayout.LayoutParams gameParams =
+            new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    dp(68)
+            );
+
+    gameParams.setMargins(0, dp(4), 0, dp(8));
+
+    page.addView(gameButton, gameParams);
+
+    shimmer.setTranslationX(-dp(70));
+
+    final Runnable shimmerLoop = new Runnable() {
+        @Override
+        public void run() {
+            shimmer.setTranslationX(-dp(70));
+
+            shimmer.animate()
+                    .translationX(dp(330))
+                    .setDuration(1800)
+                    .setInterpolator(new android.view.animation.LinearInterpolator())
+                    .withEndAction(this)
+                    .start();
+        }
+    };
+
+    shimmer.postDelayed(shimmerLoop, 500);
+
+    /* BOTTOM NAVIGATION */
+        LinearLayout bottomNav = new LinearLayout(this);
+        bottomNav.setOrientation(LinearLayout.HORIZONTAL);
+        bottomNav.setGravity(Gravity.CENTER_VERTICAL);
+        bottomNav.setPadding(dp(4), dp(4), dp(4), dp(4));
+        bottomNav.setBackgroundResource(R.drawable.bg_card);
+
+        TextView homeNav = text(
+                "⌂\nHome",
+                12,
+                Color.rgb(0, 217, 255),
+                true
+        );
+
+        TextView filesNav = text(
+                "▣\nFiles",
+                12,
+                Color.rgb(154, 167, 189),
+                false
+        );
+
+        TextView settingsNav = text(
+                "⚙\nSettings",
+                12,
+                Color.rgb(154, 167, 189),
+                false
+        );
+
+        filesNav.setOnClickListener(v -> showFilesScreen());
+
+        settingsNav.setOnClickListener(v -> showSettings());
+
+        bottomNav.addView(
+                homeNav,
+                new LinearLayout.LayoutParams(
+                        0,
+                        dp(58),
+                        1
+                )
+        );
+
+        bottomNav.addView(
+                filesNav,
+                new LinearLayout.LayoutParams(
+                        0,
+                        dp(58),
+                        1
+                )
+        );
+
+        bottomNav.addView(
+                settingsNav,
+                new LinearLayout.LayoutParams(
+                        0,
+                        dp(58),
+                        1
+                )
+        );
+
+        page.addView(bottomNav);
+
+        ScrollView scroll = new ScrollView(this);
+        scroll.setFillViewport(true);
+        scroll.addView(page);
+
+        root.addView(
+                scroll,
+                new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        0,
+                        1
+                )
+        );
+
+        setContentView(root);
+
+        fadeIn(root, 600, 0);
+    }
+
+
+    private void showFilesScreen() {
+
+        LinearLayout root = root();
+
+        LinearLayout page = new LinearLayout(this);
+        page.setOrientation(LinearLayout.VERTICAL);
+        page.setPadding(dp(14), dp(8), dp(14), dp(10));
+
+        /* HEADER */
+        LinearLayout header = new LinearLayout(this);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+
+        TextView back = text(
+                "‹",
+                34,
+                Color.rgb(0, 217, 255),
+                false
+        );
+
+        back.setOnClickListener(v -> showHome());
+
+        header.addView(
+                back,
+                new LinearLayout.LayoutParams(
+                        dp(42),
+                        dp(48)
+                )
+        );
+
+        LinearLayout titleBox = new LinearLayout(this);
+        titleBox.setOrientation(LinearLayout.VERTICAL);
+
+        TextView title = text(
+                "My Vault",
+                22,
+                Color.WHITE,
+                true
+        );
+        title.setGravity(Gravity.START);
+
+        TextView subtitle = text(
+                "Your encrypted private files",
+                12,
+                Color.rgb(154, 167, 189),
+                false
+        );
+        subtitle.setGravity(Gravity.START);
+
+        titleBox.addView(title);
+        titleBox.addView(subtitle);
+
+        header.addView(
+                titleBox,
+                new LinearLayout.LayoutParams(
+                        0,
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        1
+                )
+        );
+
+        TextView lock = text(
+                "🔐",
+                25,
+                Color.WHITE,
+                false
+        );
+
+        header.addView(
+                lock,
+                new LinearLayout.LayoutParams(
+                        dp(48),
+                        dp(48)
+                )
+        );
+
+        page.addView(header);
+
+        /* SEARCH */
+        EditText search = new EditText(this);
+        search.setHint("Search your vault...");
+        search.setHintTextColor(Color.rgb(125, 140, 160));
+        search.setTextColor(Color.WHITE);
+        search.setTextSize(14);
+        search.setSingleLine(true);
+        search.setInputType(InputType.TYPE_CLASS_TEXT);
+        search.setPadding(dp(16), 0, dp(16), 0);
+        search.setBackgroundResource(R.drawable.bg_card);
+
+        LinearLayout.LayoutParams searchParams =
+                new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        dp(52)
+                );
+        searchParams.setMargins(0, dp(16), 0, dp(10));
+
+        page.addView(search, searchParams);
+
+        /* SORT BAR */
+        LinearLayout sortBar = new LinearLayout(this);
+        sortBar.setGravity(Gravity.CENTER_VERTICAL);
+
+        TextView countText = text(
+                "",
+                12,
+                Color.rgb(154, 167, 189),
+                false
+        );
+        countText.setGravity(Gravity.START);
+
+        sortBar.addView(
+                countText,
+                new LinearLayout.LayoutParams(
+                        0,
+                        dp(42),
+                        1
+                )
+        );
+
+        Button sortButton = button("↕ Sort");
+
+        sortButton.setTextSize(12);
+
+        sortBar.addView(
+                sortButton,
+                new LinearLayout.LayoutParams(
+                        dp(105),
+                        dp(42)
+                )
+        );
+
+        page.addView(sortBar);
+/* FILE LIST */
+        LinearLayout fileList = new LinearLayout(this);
+        fileList.setOrientation(LinearLayout.VERTICAL);
+
+        ScrollView fileScroll = new ScrollView(this);
+        fileScroll.setFillViewport(true);
+        fileScroll.addView(fileList);
+
+        page.addView(
+                fileScroll,
+                new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        0,
+                        1
+                )
+        );
+
+        /* BOTTOM ACTION */
+        Button addButton = button("＋  Add Files & Folders");
+
+        LinearLayout.LayoutParams addParams =
+                new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        dp(52)
+                );
+        addParams.setMargins(0, dp(10), 0, dp(8));
+
+        addButton.setOnClickListener(v -> openFilePicker());
+
+        page.addView(addButton, addParams);
+
+        final int[] sortMode = {0};
+
+        Runnable refresh = new Runnable() {
+            @Override
+            public void run() {
+
+                fileList.removeAllViews();
+
+                ArrayList<VaultItem> items = VaultIndex.load(MainActivity.this);
+
+                countText.setText(
+                        items.size() + (items.size() == 1 ? " file" : " files")
+                );
+
+                String query =
+                        search.getText().toString().trim().toLowerCase(Locale.US);
+
+                ArrayList<VaultItem> filtered =
+                        new ArrayList<>();
+
+                for (VaultItem item : items) {
+
+                    if (item == null) {
+                        continue;
+                    }
+
+                    String name =
+                            item.originalName == null
+                                    ? ""
+                                    : item.originalName;
+
+                    if (query.length() == 0 ||
+                            name.toLowerCase(Locale.US).contains(query)) {
+
+                        filtered.add(item);
+                    }
+                }
+
+                if (sortMode[0] == 0) {
+
+                    Collections.sort(
+                            filtered,
+                            new Comparator<VaultItem>() {
+                                @Override
+                                public int compare(
+                                        VaultItem a,
+                                        VaultItem b
+                                ) {
+                                    return Long.compare(
+                                            b.dateAdded,
+                                            a.dateAdded
+                                    );
+                                }
+                            }
+                    );
+
+                } else if (sortMode[0] == 1) {
+
+                    Collections.sort(
+                            filtered,
+                            new Comparator<VaultItem>() {
+                                @Override
+                                public int compare(
+                                        VaultItem a,
+                                        VaultItem b
+                                ) {
+                                    return safeName(a).compareToIgnoreCase(
+                                            safeName(b)
+                                    );
+                                }
+                            }
+                    );
+
+                } else {
+
+                    Collections.sort(
+                            filtered,
+                            new Comparator<VaultItem>() {
+                                @Override
+                                public int compare(
+                                        VaultItem a,
+                                        VaultItem b
+                                ) {
+                                    return Long.compare(
+                                            b.dateAdded,
+                                            a.dateAdded
+                                    );
+                                }
+                            }
+                    );
+                }
+
+                if (filtered.isEmpty()) {
+
+                    LinearLayout empty =
+                            new LinearLayout(MainActivity.this);
+
+                    empty.setOrientation(
+                            LinearLayout.VERTICAL
+                    );
+
+                    empty.setGravity(Gravity.CENTER);
+                    empty.setPadding(
+                            dp(20),
+                            dp(50),
+                            dp(20),
+                            dp(50)
+                    );
+
+                    TextView icon = text(
+                            "🔒",
+                            50,
+                            Color.WHITE,
+                            false
+                    );
+
+                    TextView emptyTitle = text(
+                            "Your Vault is Empty",
+                            20,
+                            Color.WHITE,
+                            true
+                    );
+
+                    TextView emptyText = text(
+                            query.length() == 0
+                                    ? "Encrypted files you add will appear here."
+                                    : "No files match your search.",
+                            13,
+                            Color.rgb(154, 167, 189),
+                            false
+                    );
+
+                    emptyText.setPadding(
+                            0,
+                            dp(8),
+                            0,
+                            0
+                    );
+
+                    empty.addView(icon);
+                    empty.addView(emptyTitle);
+                    empty.addView(emptyText);
+
+                    fileList.addView(empty);
+
+                } else {
+
+                    for (VaultItem item : filtered) {
+                        fileList.addView(
+                                createVaultFileCard(
+                                        item,
+                                        MainActivity.this
+                                )
+                        );
+                    }
+                }
+            }
+        };
+
+        search.addTextChangedListener(
+                new android.text.TextWatcher() {
+
+                    @Override
+                    public void beforeTextChanged(
+                            CharSequence s,
+                            int start,
+                            int count,
+                            int after
+                    ) {}
+
+                    @Override
+                    public void onTextChanged(
+                            CharSequence s,
+                            int start,
+                            int before,
+                            int count
+                    ) {
+                        refresh.run();
+                    }
+
+                    @Override
+                    public void afterTextChanged(
+                            android.text.Editable s
+                    ) {}
+                }
+        );
+
+        sortButton.setOnClickListener(v -> {
+
+            sortMode[0]++;
+
+            if (sortMode[0] > 1) {
+                sortMode[0] = 0;
+            }
+
+            if (sortMode[0] == 0) {
+                sortButton.setText("↕ Recent");
+            } else {
+                sortButton.setText("A–Z");
+            }
+
+            refresh.run();
+        });
+setContentView(root);
+
+        root.addView(
+                page,
+                new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        0,
+                        1
+                )
+        );
+
+        refresh.run();
+
+        fadeIn(root, 500, 0);
+    }
+
+    private String safeName(VaultItem item) {
+
+        if (item == null || item.originalName == null) {
+            return "";
+        }
+
+        return item.originalName;
+    }
+
+    private LinearLayout createVaultFileCard(
+            VaultItem item,
+            MainActivity activity
+    ) {
+
+        LinearLayout card =
+                new LinearLayout(activity);
+
+        card.setOrientation(
+                LinearLayout.HORIZONTAL
+        );
+
+        card.setGravity(
+                Gravity.CENTER_VERTICAL
+        );
+
+        card.setPadding(
+                dp(14),
+                dp(12),
+                dp(10),
+                dp(12)
+        );
+
+        card.setBackgroundResource(
+                R.drawable.bg_card
+        );
+
+        String mime =
+                item.mimeType == null
+                        ? ""
+                        : item.mimeType.toLowerCase(Locale.US);
+
+        String icon = "📦";
+
+        if (mime.startsWith("image/")) {
+            icon = "🖼";
+        } else if (mime.startsWith("video/")) {
+            icon = "🎬";
+        } else if (mime.startsWith("audio/")) {
+            icon = "🎵";
+        } else if (mime.contains("pdf") ||
+                mime.contains("document") ||
+                mime.contains("text")) {
+            icon = "📄";
+        }
+
+        TextView iconView =
+                text(
+                        icon,
+                        30,
+                        Color.WHITE,
+                        false
+                );
+
+        iconView.setGravity(
+                Gravity.CENTER
+        );
+
+        card.addView(
+                iconView,
+                new LinearLayout.LayoutParams(
+                        dp(50),
+                        dp(55)
+                )
+        );
+
+        LinearLayout info =
+                new LinearLayout(activity);
+
+        info.setOrientation(
+                LinearLayout.VERTICAL
+        );
+
+        info.setPadding(
+                dp(10),
+                0,
+                dp(6),
+                0
+        );
+
+        TextView name =
+                text(
+                        item.originalName == null
+                                ? "Unnamed file"
+                                : item.originalName,
+                        15,
+                        Color.WHITE,
+                        true
+                );
+
+        name.setGravity(
+                Gravity.START
+        );
+
+        name.setSingleLine(true);
+        name.setEllipsize(
+                android.text.TextUtils.TruncateAt.END
+        );
+
+        String date =
+                android.text.format.DateFormat.format(
+                        "dd MMM yyyy, HH:mm",
+                        item.dateAdded
+                ).toString();
+
+        TextView details =
+                text(
+                        "🔐 Encrypted  •  " + date,
+                        11,
+                        Color.rgb(145, 160, 180),
+                        false
+                );
+
+        details.setGravity(
+                Gravity.START
+        );
+
+        info.addView(name);
+        info.addView(details);
+
+        card.addView(
+                info,
+                new LinearLayout.LayoutParams(
+                        0,
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        1
+                )
+        );
+
+        TextView menu =
+                text(
+                        "⋮",
+                        28,
+                        Color.rgb(0, 217, 255),
+                        true
+                );
+
+        menu.setGravity(
+                Gravity.CENTER
+        );
+
+        menu.setOnClickListener(
+                v -> showVaultFileMenu(item)
+        );
+
+        card.addView(
+                menu,
+                new LinearLayout.LayoutParams(
+                        dp(40),
+                        dp(55)
+                )
+        );
+
+        LinearLayout.LayoutParams params =
+                new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                );
+
+        params.setMargins(
+                0,
+                dp(5),
+                0,
+                dp(5)
+        );
+
+        card.setLayoutParams(params);
+
+        return card;
+    }
+
+    private void showVaultFileMenu(VaultItem item) {
+
+        if (item == null) {
+            return;
+        }
+
+        new android.app.AlertDialog.Builder(this)
+                .setTitle(
+                        item.originalName == null
+                                ? "Vault File"
+                                : item.originalName
+                )
+                .setItems(
+                        new String[]{
+                                "📋 File information",
+                                "🗑 Remove from Vault"
+                        },
+                        (dialog, which) -> {
+
+                            if (which == 0) {
+
+                                File encrypted =
+                                        new File(
+                                                getFilesDir(),
+                                                "vault/" + item.encryptedName
+                                        );
+
+                                String sizeText =
+                                        encrypted.exists()
+                                                ? formatFileSize(
+                                                        encrypted.length()
+                                                )
+                                                : "Unknown";
+
+                                new android.app.AlertDialog.Builder(this)
+                                        .setTitle("File Information")
+                                        .setMessage(
+                                                "Name: " +
+                                                        item.originalName +
+                                                        "\n\nType: " +
+                                                        item.mimeType +
+                                                        "\n\nEncrypted size: " +
+                                                        sizeText +
+                                                        "\n\nAdded: " +
+                                                        android.text.format.DateFormat.format(
+                                                                "dd MMM yyyy, HH:mm",
+                                                                item.dateAdded
+                                                        )
+                                        )
+                                        .setPositiveButton(
+                                                "OK",
+                                                null
+                                        )
+                                        .show();
+
+                            } else if (which == 1) {
+
+                                confirmRemoveVaultFile(item);
+                            }
+                        }
+                )
+                .show();
+    }
+
+    private void confirmRemoveVaultFile(VaultItem item) {
+
+        new android.app.AlertDialog.Builder(this)
+                .setTitle("Remove from Vault?")
+                .setMessage(
+                        "This will permanently delete the encrypted copy from Folder Locker.\n\n" +
+                                "The original file is not restored automatically."
+                )
+                .setNegativeButton(
+                        "Cancel",
+                        null
+                )
+                .setPositiveButton(
+                        "Delete",
+                        (dialog, which) -> {
+
+                            try {
+
+                                File encrypted =
+                                        new File(
+                                                getFilesDir(),
+                                                "vault/" + item.encryptedName
+                                        );
+
+                                boolean deleted =
+                                        !encrypted.exists() ||
+                                                encrypted.delete();
+
+                                if (deleted) {
+
+                                    VaultIndex.remove(
+                                            this,
+                                            item.id
+                                    );
+
+                                    Toast.makeText(
+                                            this,
+                                            "File removed from vault.",
+                                            Toast.LENGTH_SHORT
+                                    ).show();
+
+                                    showFilesScreen();
+
+                                } else {
+
+                                    Toast.makeText(
+                                            this,
+                                            "Unable to delete encrypted file.",
+                                            Toast.LENGTH_LONG
+                                    ).show();
+                                }
+
+                            } catch (Exception e) {
+
+                                Toast.makeText(
+                                        this,
+                                        "Unable to remove file.",
+                                        Toast.LENGTH_LONG
+                                ).show();
+                            }
+                        }
+                )
+                .show();
+    }
+
+    private String formatFileSize(long bytes) {
+
+        if (bytes < 1024) {
+            return bytes + " B";
+        }
+
+        if (bytes < 1024 * 1024) {
+            return String.format(
+                    Locale.US,
+                    "%.1f KB",
+                    bytes / 1024.0
+            );
+        }
+
+        return String.format(
+                Locale.US,
+                "%.1f MB",
+                bytes / (1024.0 * 1024.0)
+        );
+    }
+
+    private void openGlowHockeyGame() {
+        Intent intent = new Intent(this, GameActivity.class);
+        startActivity(intent);
+    }
+
+    private LinearLayout categoryCard(
+            String icon,
+            String title,
+            String description
+    ) {
+
+        LinearLayout card =
+                new LinearLayout(this);
+
+        card.setGravity(
+                Gravity.CENTER_VERTICAL
+        );
+
+        card.setPadding(
+                dp(16),
+                dp(14),
+                dp(16),
+                dp(14)
+        );
+
+        card.setBackgroundResource(
+                R.drawable.bg_card
+        );
+
+        TextView iconView =
+                text(
+                        icon,
+                        27,
+                        Color.WHITE,
+                        false
+                );
+
+        iconView.setGravity(
+                Gravity.CENTER
+        );
+
+        card.addView(
+                iconView,
+                new LinearLayout.LayoutParams(
+                        dp(48),
+                        dp(48)
+                )
+        );
+
+        LinearLayout box =
+                new LinearLayout(this);
+
+        box.setOrientation(
+                LinearLayout.VERTICAL
+        );
+
+        box.setPadding(
+                dp(12),
+                0,
+                0,
+                0
+        );
+
+        TextView name =
+                text(
+                        title,
+                        16,
+                        Color.WHITE,
+                        true
+                );
+
+        name.setGravity(
+                Gravity.LEFT
+        );
+
+        TextView desc =
+                text(
+                        description,
+                        12,
+                        Color.rgb(145, 160, 180),
+                        false
+                );
+
+        desc.setGravity(
+                Gravity.LEFT
+        );
+
+        box.addView(name);
+        box.addView(desc);
+
+        card.addView(
+                box,
+                new LinearLayout.LayoutParams(
+                        0,
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        1
+                )
+        );
+
+        LinearLayout.LayoutParams params =
+                new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                );
+
+        params.setMargins(
+                0,
+                dp(4),
+                0,
+                dp(4)
+        );
+
+        card.setLayoutParams(params);
+
+        return card;
+    }
+
+    private void showSettings() {
+
+        LinearLayout root = root();
+
+        root.addView(createLogo(80));
+
+        TextView title =
+                text(
+                        "Folder Locker Settings",
+                        24,
+                        Color.WHITE,
+                        true
+                );
+
+        root.addView(title);
+
+        TextView info =
+                text(
+                        "Security and vault controls",
+                        14,
+                        Color.rgb(150, 165, 185),
+                        false
+                );
+
+        info.setPadding(
+                0,
+                dp(7),
+                0,
+                dp(20)
+        );
+
+        root.addView(info);
+
+        Button password =
+                button("🔑 Change Password");
+
+        root.addView(password);
+
+        Button fingerprint =
+                button("👆 Fingerprint Settings");
+
+        root.addView(fingerprint);
+
+        Button autoLock =
+                button("⏱ Auto-Lock Settings");
+
+        root.addView(autoLock);
+
+        Button back =
+                button("← Back to Vault");
+
+        root.addView(back);
+
+        password.setOnClickListener(
+                v -> Toast.makeText(
+                        this,
+                        "Password settings will be connected next.",
+                        Toast.LENGTH_SHORT
+                ).show()
+        );
+
+        fingerprint.setOnClickListener(
+                v -> Toast.makeText(
+                        this,
+                        "Fingerprint settings will be connected next.",
+                        Toast.LENGTH_SHORT
+                ).show()
+        );
+
+        autoLock.setOnClickListener(
+                v -> Toast.makeText(
+                        this,
+                        "Auto-lock settings will be connected next.",
+                        Toast.LENGTH_SHORT
+                ).show()
+        );
+
+        back.setOnClickListener(
+                v -> showHome()
+        );
+
+        setContentView(root);
+
+        fadeIn(root, 500, 0);
+    }
+
+    private void authenticateFingerprint() {
+
+        if (Build.VERSION.SDK_INT < 28) {
+
+            message.setText(
+                    "Fingerprint authentication is not supported here."
+            );
+
+            return;
+        }
+android.hardware.biometrics.BiometricPrompt prompt =
+                new android.hardware.biometrics.BiometricPrompt.Builder(this)
+                        .setTitle("Folder Locker")
+                        .setSubtitle("Unlock your private vault")
+                        .setDescription(
+                                "Use your fingerprint to continue."
+                        )
+                        .setNegativeButton(
+                                "Use Password",
+                                getUiExecutor(),
+                                (dialog, which) -> {}
+                        )
+                        .build();
+
+        prompt.authenticate(
+                new android.os.CancellationSignal(),
+                getUiExecutor(),
+                new android.hardware.biometrics.BiometricPrompt.AuthenticationCallback() {
+
+                    @Override
+                    public void onAuthenticationSucceeded(
+                            android.hardware.biometrics.BiometricPrompt.AuthenticationResult result) {
+
+                        runOnUiThread(
+                                () -> openVault()
+                        );
+                    }
+
+                    @Override
+                    public void onAuthenticationFailed() {
+
+                        runOnUiThread(
+                                () -> message.setText(
+                                        "Fingerprint not recognized."
+                                )
+                        );
+                    }
+
+                    @Override
+                    public void onAuthenticationError(
+                            int errorCode,
+                            CharSequence errString) {
+
+                        runOnUiThread(
+                                () -> message.setText(
+                                        errString
+                                )
+                        );
+                    }
+                }
+        );
+    }
+
+    private String hashPassword(
+            String password,
+            byte[] salt
+    ) throws Exception {
+
+        javax.crypto.SecretKeyFactory factory =
+                javax.crypto.SecretKeyFactory.getInstance(
+                        "PBKDF2WithHmacSHA256"
+                );
+
+        javax.crypto.spec.PBEKeySpec spec =
+                new javax.crypto.spec.PBEKeySpec(
+                        password.toCharArray(),
+                        salt,
+                        120000,
+                        256
+                );
+
+        byte[] result =
+                factory.generateSecret(spec)
+                        .getEncoded();
+
+        return bytesToHex(result);
+    }
+
+    private byte[] deriveVaultKey(String password) throws Exception {
+
+        String saltHex =
+                prefs.getString(KEY_SALT, null);
+
+        if (saltHex == null) {
+            throw new Exception(
+                    "Vault encryption salt is missing."
+            );
+        }
+
+        byte[] salt =
+                hexToBytes(saltHex);
+
+        javax.crypto.SecretKeyFactory factory =
+                javax.crypto.SecretKeyFactory.getInstance(
+                        "PBKDF2WithHmacSHA256"
+                );
+
+        javax.crypto.spec.PBEKeySpec spec =
+                new javax.crypto.spec.PBEKeySpec(
+                        password.toCharArray(),
+                        salt,
+                        120000,
+                        256
+                );
+
+        return factory.generateSecret(spec)
+                .getEncoded();
+    }
+
+    private boolean constantTimeEquals(
+            String a,
+            String b
+    ) {
+
+        if (a == null || b == null) {
+            return false;
+        }
+
+        return MessageDigest.isEqual(
+                a.getBytes(StandardCharsets.UTF_8),
+                b.getBytes(StandardCharsets.UTF_8)
+        );
+    }
+
+    private String bytesToHex(byte[] bytes) {
+
+        StringBuilder result =
+                new StringBuilder();
+
+        for (byte b : bytes) {
+
+            result.append(
+                    String.format(
+                            "%02x",
+                            b & 0xff
+                    )
+            );
+        }
+
+        return result.toString();
+    }
+
+    private byte[] hexToBytes(String value) {
+
+        int length = value.length();
+
+        byte[] data =
+                new byte[length / 2];
+
+        for (int i = 0; i < length; i += 2) {
+
+            data[i / 2] =
+                    (byte)
+                            (
+                                    (Character.digit(
+                                            value.charAt(i),
+                                            16
+                                    ) << 4)
+                                    +
+                                    Character.digit(
+                                            value.charAt(i + 1),
+                                            16
+                                    )
+                            );
+        }
+
+        return data;
+    }
+
+    private Executor getUiExecutor() {
+
+        return new Executor() {
+
+            @Override
+            public void execute(
+                    Runnable command
+            ) {
+
+                new android.os.Handler(
+                        android.os.Looper.getMainLooper()
+                ).post(command);
+            }
+        };
+    }
+
+    private class SpaceView extends View {
+
+        SpaceView() {
+            super(MainActivity.this);
+        }
+    }
+}

@@ -1,0 +1,475 @@
+package com.securevault.app;
+
+import android.app.Activity;
+import android.os.Bundle;
+import android.os.Build;
+import android.content.SharedPreferences;
+import android.graphics.Color;
+import android.graphics.Typeface;
+import android.text.InputType;
+import android.view.Gravity;
+import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+import android.widget.Toast;
+
+
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.SecureRandom;
+import java.util.concurrent.Executor;
+
+public class MainActivity extends Activity {
+
+    private static final String PREFS = "folder_locker_security";
+    private static final String KEY_SALT = "password_salt";
+    private static final String KEY_HASH = "password_hash";
+    private static final String KEY_FINGERPRINT = "fingerprint_enabled";
+
+    private SharedPreferences prefs;
+    private EditText passwordInput;
+    private EditText confirmInput;
+    private TextView heading;
+    private TextView message;
+    private Button mainButton;
+    private Button fingerprintButton;
+
+    private int dp(float value) {
+        return (int) (value * getResources().getDisplayMetrics().density + 0.5f);
+    }
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+
+        if (hasPassword()) {
+            showUnlockScreen();
+        } else {
+            showCreatePasswordScreen();
+        }
+    }
+
+    private boolean hasPassword() {
+        return prefs.contains(KEY_HASH) && prefs.contains(KEY_SALT);
+    }
+
+    private LinearLayout createRoot() {
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setGravity(Gravity.CENTER);
+        root.setPadding(dp(28), dp(28), dp(28), dp(28));
+        root.setBackgroundColor(Color.rgb(10, 14, 22));
+        return root;
+    }
+
+    private TextView createTitle() {
+        TextView title = new TextView(this);
+        title.setText("🔐");
+        title.setTextSize(52);
+        title.setGravity(Gravity.CENTER);
+        title.setTextColor(Color.WHITE);
+        return title;
+    }
+
+    private TextView createAppName() {
+        TextView title = new TextView(this);
+        title.setText("Folder Locker");
+        title.setTextSize(30);
+        title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        title.setGravity(Gravity.CENTER);
+        title.setTextColor(Color.WHITE);
+        title.setPadding(0, dp(4), 0, dp(8));
+        return title;
+    }
+
+    private TextView createMessage(String text) {
+        TextView view = new TextView(this);
+        view.setText(text);
+        view.setTextSize(16);
+        view.setGravity(Gravity.CENTER);
+        view.setTextColor(Color.rgb(180, 190, 205));
+        view.setPadding(0, 0, 0, dp(24));
+        return view;
+    }
+
+    private EditText createPasswordField(String hint) {
+        EditText field = new EditText(this);
+        field.setHint(hint);
+        field.setHintTextColor(Color.rgb(130, 140, 155));
+        field.setTextColor(Color.WHITE);
+        field.setTextSize(16);
+        field.setSingleLine(true);
+        field.setPadding(dp(16), 0, dp(16), 0);
+        field.setBackgroundColor(Color.rgb(27, 33, 44));
+        field.setInputType(
+                InputType.TYPE_CLASS_TEXT |
+                InputType.TYPE_TEXT_VARIATION_PASSWORD
+        );
+
+        LinearLayout.LayoutParams params =
+                new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        dp(54)
+                );
+
+        params.setMargins(0, 0, 0, dp(12));
+        field.setLayoutParams(params);
+
+        return field;
+    }
+
+    private Button createButton(String text) {
+        Button button = new Button(this);
+        button.setText(text);
+        button.setTextSize(15);
+        button.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        button.setTextColor(Color.WHITE);
+        button.setAllCaps(false);
+        button.setBackgroundColor(Color.rgb(0, 170, 190));
+
+        LinearLayout.LayoutParams params =
+                new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        dp(52)
+                );
+
+        params.setMargins(0, dp(6), 0, dp(6));
+        button.setLayoutParams(params);
+
+        return button;
+    }
+
+    private void showCreatePasswordScreen() {
+
+        LinearLayout root = createRoot();
+
+        root.addView(createTitle());
+        root.addView(createAppName());
+
+        heading = new TextView(this);
+        heading.setText("Create your vault password");
+        heading.setTextSize(20);
+        heading.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        heading.setGravity(Gravity.CENTER);
+        heading.setTextColor(Color.rgb(100, 220, 230));
+
+        root.addView(heading);
+        root.addView(createMessage(
+                "This password protects your private files."
+        ));
+
+        passwordInput = createPasswordField("Create password");
+        confirmInput = createPasswordField("Confirm password");
+
+        root.addView(passwordInput);
+        root.addView(confirmInput);
+
+        mainButton = createButton("Create Secure Vault");
+        root.addView(mainButton);
+
+        message = new TextView(this);
+        message.setText("");
+        message.setGravity(Gravity.CENTER);
+        message.setTextSize(14);
+        message.setTextColor(Color.rgb(150, 220, 160));
+        message.setPadding(0, dp(12), 0, 0);
+
+        root.addView(message);
+
+        mainButton.setOnClickListener(v -> createPassword());
+
+        setContentView(root);
+    }
+
+    private void createPassword() {
+
+        String password = passwordInput.getText().toString();
+        String confirm = confirmInput.getText().toString();
+
+        if (password.length() < 6) {
+            message.setText("Password must contain at least 6 characters.");
+            message.setTextColor(Color.rgb(255, 150, 150));
+            return;
+        }
+
+        if (!password.equals(confirm)) {
+            message.setText("Passwords do not match.");
+            message.setTextColor(Color.rgb(255, 150, 150));
+            return;
+        }
+
+        try {
+
+            byte[] salt = new byte[16];
+            new SecureRandom().nextBytes(salt);
+
+            String hash = hashPassword(password, salt);
+
+            prefs.edit()
+                    .putString(KEY_SALT, bytesToHex(salt))
+                    .putString(KEY_HASH, hash)
+                    .putBoolean(KEY_FINGERPRINT, false)
+                    .apply();
+
+            Toast.makeText(
+                    this,
+                    "Vault password created.",
+                    Toast.LENGTH_SHORT
+            ).show();
+
+            showUnlockScreen();
+
+        } catch (Exception e) {
+
+            message.setText("Unable to create the vault password.");
+            message.setTextColor(Color.rgb(255, 150, 150));
+        }
+    }
+
+    private void showUnlockScreen() {
+
+        LinearLayout root = createRoot();
+
+        root.addView(createTitle());
+        root.addView(createAppName());
+
+        heading = new TextView(this);
+        heading.setText("Vault Locked");
+        heading.setTextSize(22);
+        heading.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        heading.setGravity(Gravity.CENTER);
+        heading.setTextColor(Color.rgb(100, 220, 230));
+
+        root.addView(heading);
+        root.addView(createMessage(
+                "Authenticate to access your private files."
+        ));
+
+        passwordInput = createPasswordField("Enter vault password");
+        root.addView(passwordInput);
+
+        mainButton = createButton("🔓 Unlock Vault");
+        root.addView(mainButton);
+
+        fingerprintButton = createButton("👆 Use Fingerprint");
+        root.addView(fingerprintButton);
+
+        message = new TextView(this);
+        message.setText("");
+        message.setGravity(Gravity.CENTER);
+        message.setTextSize(14);
+        message.setTextColor(Color.rgb(255, 150, 150));
+        message.setPadding(0, dp(12), 0, 0);
+
+        root.addView(message);
+
+        mainButton.setOnClickListener(v -> unlockWithPassword());
+
+        fingerprintButton.setOnClickListener(
+                v -> authenticateFingerprint()
+        );
+
+        setContentView(root);
+
+        if (prefs.getBoolean(KEY_FINGERPRINT, false)) {
+            fingerprintButton.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void unlockWithPassword() {
+
+        String password = passwordInput.getText().toString();
+
+        if (password.length() == 0) {
+            message.setText("Enter your password.");
+            return;
+        }
+
+        try {
+
+            String savedSalt = prefs.getString(KEY_SALT, "");
+            String savedHash = prefs.getString(KEY_HASH, "");
+
+            byte[] salt = hexToBytes(savedSalt);
+            String enteredHash = hashPassword(password, salt);
+
+            if (constantTimeEquals(savedHash, enteredHash)) {
+                openVault();
+            } else {
+                message.setText("Incorrect password.");
+            }
+
+        } catch (Exception e) {
+            message.setText("Unable to verify password.");
+        }
+    }
+
+    private String hashPassword(String password, byte[] salt)
+            throws Exception {
+
+        javax.crypto.SecretKeyFactory factory =
+                javax.crypto.SecretKeyFactory.getInstance(
+                        "PBKDF2WithHmacSHA256"
+                );
+
+        javax.crypto.spec.PBEKeySpec spec =
+                new javax.crypto.spec.PBEKeySpec(
+                        password.toCharArray(),
+                        salt,
+                        120000,
+                        256
+                );
+
+        byte[] result = factory.generateSecret(spec).getEncoded();
+
+        return bytesToHex(result);
+    }
+
+    private boolean constantTimeEquals(String a, String b) {
+
+        if (a == null || b == null) {
+            return false;
+        }
+
+        return MessageDigest.isEqual(
+                a.getBytes(StandardCharsets.UTF_8),
+                b.getBytes(StandardCharsets.UTF_8)
+        );
+    }
+
+    private String bytesToHex(byte[] bytes) {
+
+        StringBuilder result = new StringBuilder();
+
+        for (byte b : bytes) {
+            result.append(String.format("%02x", b & 0xff));
+        }
+
+        return result.toString();
+    }
+
+    private byte[] hexToBytes(String value) {
+
+        int length = value.length();
+        byte[] data = new byte[length / 2];
+
+        for (int i = 0; i < length; i += 2) {
+            data[i / 2] =
+                    (byte) ((Character.digit(value.charAt(i), 16) << 4)
+                    + Character.digit(value.charAt(i + 1), 16));
+        }
+
+        return data;
+    }
+
+    private void authenticateFingerprint() {
+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            message.setText(
+                    "Fingerprint authentication is not supported on this Android version."
+            );
+            return;
+        }
+
+        android.hardware.biometrics.BiometricPrompt prompt =
+                new android.hardware.biometrics.BiometricPrompt.Builder(this)
+                        .setTitle("Folder Locker")
+                        .setSubtitle("Unlock your private vault")
+                        .setDescription("Use your fingerprint to continue.")
+                        .setNegativeButton(
+                                "Use Password",
+                                getUiExecutor(),
+                                (dialog, which) -> {}
+                        )
+                        .build();
+
+        prompt.authenticate(
+                new android.os.CancellationSignal(),
+                getUiExecutor(),
+                new android.hardware.biometrics.BiometricPrompt.AuthenticationCallback() {
+
+                    @Override
+                    public void onAuthenticationSucceeded(
+                            android.hardware.biometrics.BiometricPrompt.AuthenticationResult result) {
+
+                        runOnUiThread(() -> openVault());
+                    }
+
+                    @Override
+                    public void onAuthenticationFailed() {
+
+                        runOnUiThread(() ->
+                                message.setText("Fingerprint not recognized.")
+                        );
+                    }
+
+                    @Override
+                    public void onAuthenticationError(
+                            int errorCode,
+                            CharSequence errString) {
+
+                        runOnUiThread(() ->
+                                message.setText(errString)
+                        );
+                    }
+                }
+        );
+    }
+
+    private void openVault() {
+
+        Toast.makeText(
+                this,
+                "Authentication successful.",
+                Toast.LENGTH_SHORT
+        ).show();
+
+        showVaultPlaceholder();
+    }
+
+    private void showVaultPlaceholder() {
+
+        LinearLayout root = createRoot();
+
+        TextView icon = createTitle();
+        root.addView(icon);
+
+        TextView title = createAppName();
+        root.addView(title);
+
+        TextView status = createMessage(
+                "🔓 Vault Unlocked"
+        );
+
+        status.setTextColor(Color.rgb(100, 220, 150));
+        root.addView(status);
+
+        TextView info = new TextView(this);
+        info.setText(
+                "Secure vault initialized.\n\n" +
+                "File and folder protection will be added next."
+        );
+        info.setTextColor(Color.rgb(190, 200, 215));
+        info.setTextSize(16);
+        info.setGravity(Gravity.CENTER);
+        info.setPadding(0, dp(10), 0, dp(30));
+
+        root.addView(info);
+
+        Button lock = createButton("🔒 Lock Vault");
+
+        lock.setOnClickListener(v -> showUnlockScreen());
+
+        root.addView(lock);
+
+        setContentView(root);
+    }
+
+    private Executor getUiExecutor() {
+        return new Executor() { public void execute(Runnable command) { new android.os.Handler(android.os.Looper.getMainLooper()).post(command); } };
+    }
+}

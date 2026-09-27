@@ -1,0 +1,29 @@
+# Android/Gradle
+.gradle/
+build/
+app/build/
+
+# Local Android SDK configuration
+local.properties
+
+# Signing keys
+*.keystore
+*.jks
+
+# Compiled helper files
+*.class
+
+# Temporary/generated test files
+test/
+agp-test/
+
+# Old/manual APK-building tools
+tools/BuildApk.class
+tools/ManifestBuilder.class
+
+# Backup archives
+*.tar.gz
+
+# IDE files
+.idea/
+*.iml

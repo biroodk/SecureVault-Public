@@ -1,0 +1,70 @@
+[1mdiff --git a/app/src/main/java/com/securevault/app/MainActivity.java b/app/src/main/java/com/securevault/app/MainActivity.java[m
+[1mindex 8719b66..989df95 100644[m
+[1m--- a/app/src/main/java/com/securevault/app/MainActivity.java[m
+[1m+++ b/app/src/main/java/com/securevault/app/MainActivity.java[m
+[36m@@ -1,6 +1,7 @@[m
+ package com.securevault.app;[m
+ [m
+ import android.app.Activity;[m
+[32m+[m[32mimport android.app.AlertDialog;[m
+ import android.os.Bundle;[m
+ import android.os.Build;[m
+ import android.content.SharedPreferences;[m
+[36m@@ -1850,7 +1851,7 @@[m [mbox.addView([m
+                     optionParams[m
+             );[m
+ [m
+[31m-            option.setOnClickListener(v -> {[m
+[32m+[m[32m            option.setOnClickListener(optionView -> {[m
+ [m
+                 dialog.dismiss();[m
+ [m
+[36m@@ -2610,7 +2611,16 @@[m [mcontainer.addView([m
+ [m
+                 backupDir.delete();[m
+ [m
+[31m-                current_folder_id = "";[m
+[32m+[m[32m                getSharedPreferences([m
+[32m+[m[32m        "folder_locker_security",[m
+[32m+[m[32m        MODE_PRIVATE[m
+[32m+[m[32m)[m
+[32m+[m[32m        .edit()[m
+[32m+[m[32m        .putString([m
+[32m+[m[32m                "current_folder_id",[m
+[32m+[m[32m                ""[m
+[32m+[m[32m        )[m
+[32m+[m[32m        .apply();[m
+ [m
+                 Toast.makeText([m
+                         this,[m
+[36m@@ -3661,6 +3671,8 @@[m [mcontainer.addView([m
+ [m
+     private void showFilesScreen() {[m
+ [m
+[32m+[m[32m        final int[] sortMode = {0};[m
+[32m+[m
+         String currentFolderId =[m
+                 getSharedPreferences([m
+                         PREFS,[m
+[36m@@ -4320,10 +4332,10 @@[m [mcontainer.addView([m
+                     R.drawable.bg_dialog[m
+             );[m
+ [m
+[31m-            TextView title =[m
+[32m+[m[32m            TextView addTitle =[m
+                     new TextView(this);[m
+ [m
+[31m-            title.setText("Add to Vault");[m
+[32m+[m[32m            addTitle.setText("Add to Vault");[m
+             title.setTextColor([m
+                     android.graphics.Color.WHITE[m
+             );[m
+[36m@@ -4334,7 +4346,7 @@[m [mcontainer.addView([m
+             );[m
+ [m
+             box.addView([m
+[31m-                    title,[m
+[32m+[m[32m                    addTitle,[m
+                     new LinearLayout.LayoutParams([m
+                             LinearLayout.LayoutParams.MATCH_PARENT,[m
+                             dp(48)[m

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="neon_cyan">#00D9FF</color>
+    <color name="neon_purple">#8B5CF6</color>
+    <color name="vault_background">#080B18</color>
+    <color name="vault_card">#10182A</color>
+    <color name="vault_text">#F4F7FF</color>
+    <color name="vault_muted">#9AA7BD</color>
+    <color name="vault_success">#35E69A</color>
+    <color name="vault_error">#FF6B81</color>
+</resources>
